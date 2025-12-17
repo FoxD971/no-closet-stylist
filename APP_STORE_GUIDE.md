@@ -88,15 +88,38 @@ npx cap open ios       # Opens Xcode (Requires Mac)
 
 ---
 
+## 📱 Testing iOS without a Mac (Free)
+
+Since **iOS Simulators only run on macOS**, you cannot run an iOS Simulator on Windows.
+Also, without a **Paid Apple Developer Account**, you cannot easily install the "Native" app on your iPhone.
+
+**The Solution: Test as a PWA (Progressive Web App)**
+You can still test your app on your physical iPhone right now!
+
+1.  **Run Locally:**
+    ```bash
+    npm run dev -- --host
+    ```
+2.  **Connect:** Ensure your iPhone and PC are on the same WiFi.
+3.  **Open:** On your iPhone, visit `http://YOUR_PC_IP:5173` (e.g., `http://192.168.1.5:5173`).
+4.  **Install:** Tap the **Share Button** (box with arrow) -> Scroll down -> **Add to Home Screen**.
+
+This installs the app on your home screen. It will look and feel like a native app, but it will use the **Web Fallbacks** for Camera and Location (which we implemented!).
+
+---
+
 ## ☁️ Cloud Build Option (No Mac Needed)
 
 If you don't have a Mac for iOS builds, use **Ionic Appflow**:
 
 1. Create account on [ionic.io](https://ionic.io)
 2. Connect your GitHub repository
-3. Set up a "Package Build"
-4. Select "iOS" target
-5. Download the `.ipa` file
+3. Set up a new App:
+   - **Framework:** React
+   - **Native Runtime:** Capacitor
+4. Set up a "Package Build"
+5. Select "iOS" target
+6. Download the `.ipa` file
 6. Use "Transporter" app (on any Mac you can borrow) or cloud upload tools to submit.
 
 ---
