@@ -1,0 +1,56 @@
+{
+  "expo": {
+    "name": "Fashion Scanner",
+    "slug": "fashion-scanner",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./public/icon-512.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./public/icon-512.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Fashion Scanner to access your camera to scan clothing items."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow Fashion Scanner to use your location to find nearby stores."
+        }
+      ],
+      "expo-font",
+      "expo-web-browser"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.fashionscanner.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Allow Fashion Scanner to access your camera to scan clothing items.",
+        "NSLocationWhenInUseUsageDescription": "Allow Fashion Scanner to use your location to find nearby stores."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./public/icon-512.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.fashionscanner.app",
+      "permissions": [
+        "CAMERA",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
+      ]
+    },
+    "extra": {
+      "eas": {
+        "projectId": "8da6472f-89ab-4eb2-a4ca-6532dc03bb01"
+      }
+    }
+  }
+}

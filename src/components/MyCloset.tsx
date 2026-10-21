@@ -1,146 +1,108 @@
-import { motion } from 'framer-motion';
-import { Heart, TrendingUp, Clock, Sparkles } from 'lucide-react';
-
-interface ClosetItem {
-  id: string;
-  name: string;
-  category: string;
-  imageUrl: string;
-  savedDate: string;
-}
+import { View, Text, ScrollView, TouchableOpacity, Image } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Heart, Sparkles, X, Plus } from 'lucide-react-native';
+import { useAppStore } from '../store/useAppStore';
+import Animated, { FadeInDown } from 'react-native-reanimated';
+import { formatPrice } from '../utils/formatting';
+import { StylingAdviceSection } from './StylingAdviceSection';
+import { EmptyState } from './EmptyState';
 
 export function MyCloset() {
-  // Mock closet items
-  const closetItems: ClosetItem[] = [
-    {
-      id: '1',
-      name: 'Oversized Cotton Hoodie',
-      category: 'Hoodie',
-      imageUrl: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="200"%3E%3Crect fill="%2310b981" width="200" height="200"/%3E%3C/svg%3E',
-      savedDate: '2 days ago',
-    },
-    {
-      id: '2',
-      name: 'Wide-Leg Cargo Pants',
-      category: 'Pants',
-      imageUrl: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="200"%3E%3Crect fill="%2314b8a6" width="200" height="200"/%3E%3C/svg%3E',
-      savedDate: '5 days ago',
-    },
-    {
-      id: '3',
-      name: 'High-Top Sneakers',
-      category: 'Shoes',
-      imageUrl: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="200"%3E%3Crect fill="%23fb923c" width="200" height="200"/%3E%3C/svg%3E',
-      savedDate: '1 week ago',
-    },
-  ];
+  const { savedItems, removeSavedItem } = useAppStore();
 
-  const stats = [
-    { label: 'Saved Items', value: '12', icon: Heart },
-    { label: 'Style Score', value: '94', icon: TrendingUp },
-    { label: 'Recent Scans', value: '8', icon: Clock },
-  ];
+  const StatCard = ({ icon, label, value }: { icon: string; label: string; value: string }) => (
+    <View className="flex-1 bg-gray-50 dark:bg-gray-900 rounded-2xl p-4 items-center">
+      <Text className="text-3xl mb-2">{icon}</Text>
+      <Text className="text-2xl font-bold text-gray-900 dark:text-white">{value}</Text>
+      <Text className="text-xs text-gray-600 dark:text-gray-400 uppercase mt-1">{label}</Text>
+    </View>
+  );
+
+  const ClosetItem = ({ item }: { item: any }) => (
+    <Animated.View
+      entering={FadeInDown.duration(400)}
+      className="w-[48%] mb-4 bg-white dark:bg-gray-900 rounded-2xl p-2 shadow-sm border border-gray-100 dark:border-gray-800"
+    >
+      <View className="aspect-[4/5] rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800 mb-3 relative">
+        <Image
+          source={{ uri: item.product.imageUrl }}
+          className="w-full h-full"
+          resizeMode="cover"
+        />
+        <TouchableOpacity
+          onPress={() => removeSavedItem(item.product.id)}
+          className="absolute top-2 right-2 w-6 h-6 rounded-full bg-white/90 items-center justify-center shadow-sm"
+        >
+          <X size={14} color="#EF4444" />
+        </TouchableOpacity>
+      </View>
+      <Text numberOfLines={1} className="font-semibold text-gray-900 dark:text-white text-sm px-1">
+        {item.product.name}
+      </Text>
+      <Text className="text-brand-500 font-bold text-xs mt-1 px-1">
+        {formatPrice(item.product.price, item.product.currency)}
+      </Text>
+    </Animated.View>
+  );
 
   return (
-    <div className="h-full w-full bg-gradient-to-b from-slate-50 via-emerald-50/20 to-slate-50 overflow-y-auto pb-24">
-      <div className="px-6 pt-12 pb-6">
+    <SafeAreaView className="flex-1 bg-white dark:bg-black">
+      <View className="flex-1">
         {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
-        >
-          <h1 className="bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent mb-2">My Closet</h1>
-          <p className="text-slate-600">Your saved styles and discoveries</p>
-        </motion.div>
+        <View className="px-6 pt-6 pb-4 border-b border-gray-200 dark:border-gray-800">
+          <Text className="text-3xl font-bold text-gray-900 dark:text-white">My Closet</Text>
+          <Text className="text-gray-600 dark:text-gray-400 mt-1">
+            {savedItems.length} {savedItems.length === 1 ? 'item' : 'items'} saved
+          </Text>
+        </View>
 
-        {/* Stats */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="grid grid-cols-3 gap-3 mb-8"
-        >
-          {stats.map((stat, index) => (
-            <motion.div
-              key={stat.label}
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.2 + index * 0.1 }}
-              className="bg-white rounded-2xl p-4 border border-slate-200 shadow-md hover:shadow-lg transition-shadow"
-            >
-              <stat.icon className="w-5 h-5 text-emerald-500 mb-2" />
-              <div className="text-slate-900 mb-1">{stat.value}</div>
-              <div className="text-xs text-slate-500">{stat.label}</div>
-            </motion.div>
-          ))}
-        </motion.div>
+        {/* Empty State or Content */}
+        {savedItems.length === 0 ? (
+          <EmptyState
+            icon="👗"
+            title="Your closet is empty"
+            message="Start scanning clothes to build your digital wardrobe and get personalized outfit recommendations!"
+          />
+        ) : (
+          <ScrollView className="flex-1">
+            {/* Stats Section */}
+            <View className="flex-row px-6 py-6 gap-4">
+              <StatCard icon="👕" label="Items" value={savedItems.length.toString()} />
+              <StatCard icon="✨" label="Outfits" value="0" />
+              <StatCard icon="🎯" label="Matches" value="0" />
+            </View>
 
-        {/* Closet Items */}
-        <div>
-          <h2 className="text-slate-900 mb-4">Saved Items</h2>
-          <div className="space-y-4">
-            {closetItems.map((item, index) => (
-              <motion.div
-                key={item.id}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.2 + index * 0.1 }}
-                whileHover={{ scale: 1.02 }}
-                className="bg-white rounded-2xl overflow-hidden border border-slate-200 shadow-md hover:shadow-xl transition-all"
-              >
-                <div className="flex gap-4 p-4">
-                  <div className="w-24 h-24 rounded-xl overflow-hidden flex-shrink-0 shadow-md">
-                    <img
-                      src={item.imageUrl}
-                      alt={item.name}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-slate-900 mb-1">{item.name}</h3>
-                    <p className="text-slate-500 text-sm mb-2">{item.category}</p>
-                    <div className="flex items-center gap-2 text-xs text-slate-400">
-                      <Clock className="w-3 h-3" />
-                      <span>{item.savedDate}</span>
-                    </div>
-                  </div>
-                  <motion.button
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                    className="self-start p-2 hover:bg-red-50 rounded-lg transition-colors"
-                  >
-                    <Heart className="w-5 h-5 text-red-500 fill-red-500" />
-                  </motion.button>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
+            {/* Styling Advice */}
+            {savedItems.length > 0 && (
+              <View className="mb-6">
+                <StylingAdviceSection onSelectProduct={(product) => {
+                  console.log('Selected outfit product:', product.name);
+                }} />
+              </View>
+            )}
 
-        {/* Empty State Hint */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.6 }}
-          className="mt-8 text-center"
-        >
-          <p className="text-slate-500 text-sm">Scan more items to build your digital closet</p>
-          <motion.div
-            className="mt-4 inline-block"
-            animate={{
-              y: [0, -5, 0],
-            }}
-            transition={{
-              duration: 2,
-              repeat: Infinity,
-              ease: 'easeInOut',
-            }}
-          >
-            <Sparkles className="w-6 h-6 text-yellow-500" />
-          </motion.div>
-        </motion.div>
-      </div>
-    </div>
+            {/* Closet Grid */}
+            <View className="px-6">
+              <Text className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                All Items
+              </Text>
+              <View className="flex-row flex-wrap justify-between">
+                {savedItems.map((item, index) => (
+                  <ClosetItem key={item.product.id || index} item={item} />
+                ))}
+
+                {/* Add Item Placeholder */}
+                <TouchableOpacity className="w-[48%] mb-4 aspect-[4/5] bg-gray-50 dark:bg-gray-900/50 rounded-2xl items-center justify-center border-2 border-dashed border-gray-200 dark:border-gray-700">
+                  <View className="w-12 h-12 rounded-full bg-white dark:bg-gray-800 items-center justify-center shadow-sm mb-2">
+                    <Plus size={24} color="#9CA3AF" />
+                  </View>
+                  <Text className="text-gray-400 font-medium text-xs">Add Item</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </ScrollView>
+        )}
+      </View>
+    </SafeAreaView>
   );
 }

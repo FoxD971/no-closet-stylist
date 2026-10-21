@@ -1,222 +1,265 @@
-import { useState } from 'react';
-import { motion } from 'framer-motion';
-import { X, ShoppingBag, Heart } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, Image, Modal, ScrollView, Linking } from 'react-native';
+import * as WebBrowser from 'expo-web-browser';
+import { X, Heart, Star } from 'lucide-react-native';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import type { Product } from '../types';
+import { useAppStore } from '../store/useAppStore';
+import { theme } from '../theme';
 
 interface VirtualTryOnProps {
-  product: Product;
-  onClose: () => void;
+    product: Product;
+    onClose: () => void;
 }
 
 export function VirtualTryOn({ product, onClose }: VirtualTryOnProps) {
-  const [selectedSize, setSelectedSize] = useState('M');
-  const [selectedColor, setSelectedColor] = useState('sage');
-  const [isSaved, setIsSaved] = useState(false);
+    const [isSaved, setIsSaved] = useState(false);
+    const { isSaved: checkIsSaved, addSavedItem, removeSavedItem } = useAppStore();
 
-  const sizes = ['XS', 'S', 'M', 'L', 'XL'];
-  const colors = [
-    { name: 'sage', value: '#10b981' },
-    { name: 'teal', value: '#14b8a6' },
-    { name: 'coral', value: '#fb923c' },
-    { name: 'stone', value: '#a8a29e' },
-  ];
+    useEffect(() => {
+        setIsSaved(checkIsSaved(product.id));
+    }, [product.id]);
 
-  return (
-    <div className="relative h-full w-full bg-gradient-to-br from-slate-50 via-emerald-50/30 to-slate-50">
-      {/* Mock AR View */}
-      <div className="absolute inset-0">
-        {/* Simulated camera feed with overlay */}
-        <div className="h-full w-full bg-gradient-to-b from-slate-50 to-slate-100 relative overflow-hidden">
-          {/* Decorative background elements */}
-          <motion.div
-            className="absolute top-20 right-10 w-32 h-32 bg-emerald-200/15 rounded-full blur-2xl"
-            animate={{
-              scale: [1, 1.2, 1],
-              opacity: [0.2, 0.3, 0.2],
-            }}
-            transition={{
-              duration: 4,
-              repeat: Infinity,
-              ease: 'easeInOut',
-            }}
-          />
-          <motion.div
-            className="absolute bottom-32 left-10 w-40 h-40 bg-orange-200/15 rounded-full blur-2xl"
-            animate={{
-              scale: [1.2, 1, 1.2],
-              opacity: [0.2, 0.3, 0.2],
-            }}
-            transition={{
-              duration: 5,
-              repeat: Infinity,
-              ease: 'easeInOut',
-            }}
-          />
+    const handleSaveToggle = () => {
+        if (isSaved) {
+            removeSavedItem(product.id);
+            setIsSaved(false);
+        } else {
+            addSavedItem(product);
+            setIsSaved(true);
+        }
+    };
 
-          {/* Body tracking indicators */}
-          <motion.div
-            className="absolute top-1/4 left-1/2 -translate-x-1/2"
-            animate={{
-              opacity: [0.6, 1, 0.6],
-            }}
-            transition={{
-              duration: 2,
-              repeat: Infinity,
-              ease: 'easeInOut',
-            }}
-          >
-            <div className="w-48 h-64 border-2 border-emerald-400/50 rounded-full relative shadow-lg shadow-emerald-200/30">
-              {/* AR tracking points */}
-              {[
-                { top: 4, left: '50%', translateX: true },
-                { top: 12, left: 8 },
-                { top: 12, right: 8 },
-              ].map((pos, i) => (
-                <motion.div
-                  key={i}
-                  className={`absolute w-2 h-2 bg-emerald-500 rounded-full shadow-lg shadow-emerald-300/50 ${pos.translateX ? '-translate-x-1/2' : ''
-                    }`}
-                  style={{
-                    top: `${pos.top * 4}px`,
-                    left: pos.left ? (typeof pos.left === 'string' ? pos.left : `${pos.left * 4}px`) : undefined,
-                    right: pos.right ? `${pos.right * 4}px` : undefined
-                  }}
-                  animate={{
-                    scale: [1, 1.3, 1],
-                  }}
-                  transition={{
-                    duration: 1.5,
-                    repeat: Infinity,
-                    delay: i * 0.2,
-                  }}
-                />
-              ))}
+    const handleVisitStore = async () => {
+        console.log('🔗 [STORE] Opening browser for:', product.url);
+        if (product.url) {
+            try {
+                // Use WebBrowser (In-App Browser) for better experience & reliability
+                const result = await WebBrowser.openBrowserAsync(product.url, {
+                    presentationStyle: WebBrowser.WebBrowserPresentationStyle.FULL_SCREEN,
+                    controlsColor: theme.colors.primary,
+                    toolbarColor: theme.colors.background,
+                });
+                console.log('✅ [STORE] Browser closed:', result);
+            } catch (error) {
+                console.error('❌ [STORE] Failed to open browser, trying fallback:', error);
+                // Fallback to external browser
+                Linking.openURL(product.url).catch(err =>
+                    console.error('❌ [STORE] critical failure opening URL:', err)
+                );
+            }
+        }
+    };
 
-              {/* Simulated garment overlay */}
-              <motion.div
-                className="absolute inset-x-4 top-16 bottom-4 rounded-t-3xl shadow-xl"
-                style={{
-                  backgroundColor: colors.find(c => c.name === selectedColor)?.value
-                }}
-                animate={{
-                  opacity: [0.65, 0.8, 0.65],
-                }}
-                transition={{
-                  duration: 3,
-                  repeat: Infinity,
-                }}
-              >
-                <div className="text-center pt-8 text-white text-sm px-4">
-                  {product.name}
-                </div>
-              </motion.div>
-            </div>
-          </motion.div>
+    const renderStars = (rating: number) => {
+        return [...Array(5)].map((_, i) => (
+            <Star
+                key={i}
+                size={16}
+                color={i < Math.floor(rating) ? '#FFB800' : '#E0E0E0'}
+                fill={i < Math.floor(rating) ? '#FFB800' : 'transparent'}
+            />
+        ));
+    };
 
-          {/* AR Status Indicator */}
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="absolute top-6 left-1/2 -translate-x-1/2 bg-emerald-100/90 backdrop-blur-sm border border-emerald-300 px-4 py-2 rounded-full shadow-lg"
-          >
-            <div className="flex items-center gap-2">
-              <motion.div
-                className="w-2 h-2 bg-emerald-500 rounded-full"
-                animate={{
-                  opacity: [1, 0.5, 1],
-                }}
-                transition={{
-                  duration: 1.5,
-                  repeat: Infinity,
-                }}
-              />
-              <span className="text-emerald-800 text-sm">AR Active</span>
-            </div>
-          </motion.div>
-        </div>
-      </div>
+    return (
+        <Modal animationType="slide" transparent={false} onRequestClose={onClose}>
+            <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+                {/* Header with back and save buttons */}
+                <View style={{
+                    position: 'absolute',
+                    top: 48,
+                    left: 0,
+                    right: 0,
+                    zIndex: 20,
+                    paddingHorizontal: theme.spacing.lg,
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                }}>
+                    <TouchableOpacity
+                        onPress={onClose}
+                        style={{
+                            width: 40,
+                            height: 40,
+                            borderRadius: 20,
+                            backgroundColor: theme.colors.background,
+                            shadowColor: '#000',
+                            shadowOffset: { width: 0, height: 2 },
+                            shadowOpacity: 0.1,
+                            shadowRadius: 4,
+                            elevation: 3,
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                        }}
+                    >
+                        <X size={20} color={theme.colors.text.primary} />
+                    </TouchableOpacity>
 
-      {/* Top Controls */}
-      <div className="absolute top-0 left-0 right-0 z-10 p-6 flex justify-between items-center">
-        <button
-          onClick={onClose}
-          className="w-10 h-10 rounded-full bg-white border border-slate-200 shadow-lg flex items-center justify-center hover:shadow-xl hover:scale-105 transition-all"
-        >
-          <X className="w-5 h-5 text-slate-600" />
-        </button>
+                    <TouchableOpacity
+                        onPress={handleSaveToggle}
+                        style={{
+                            width: 40,
+                            height: 40,
+                            borderRadius: 20,
+                            backgroundColor: theme.colors.background,
+                            shadowColor: '#000',
+                            shadowOffset: { width: 0, height: 2 },
+                            shadowOpacity: 0.1,
+                            shadowRadius: 4,
+                            elevation: 3,
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                        }}
+                    >
+                        <Heart
+                            size={20}
+                            color={isSaved ? '#EF4444' : theme.colors.text.primary}
+                            fill={isSaved ? '#EF4444' : 'transparent'}
+                        />
+                    </TouchableOpacity>
+                </View>
 
-        <motion.button
-          onClick={() => setIsSaved(!isSaved)}
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.9 }}
-          className="w-10 h-10 rounded-full bg-white border border-slate-200 shadow-lg flex items-center justify-center hover:shadow-xl transition-all"
-        >
-          <Heart
-            className={`w-5 h-5 transition-all ${isSaved ? 'fill-red-500 text-red-500' : 'text-slate-600'}`}
-          />
-        </motion.button>
-      </div>
+                {/* Scrollable Content */}
+                <ScrollView showsVerticalScrollIndicator={false}>
+                    {/* Large Product Image */}
+                    <Animated.View
+                        entering={FadeIn.duration(600)}
+                        style={{
+                            width: '100%',
+                            height: 500,
+                            backgroundColor: theme.colors.backgroundSecondary,
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                        }}
+                    >
+                        <Image
+                            source={{ uri: product.imageUrl }}
+                            style={{ width: '100%', height: '100%' }}
+                            resizeMode="contain"
+                        />
+                    </Animated.View>
 
-      {/* Bottom Controls */}
-      <motion.div
-        initial={{ y: 100, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ delay: 0.2 }}
-        className="absolute bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-slate-200 p-6 safe-bottom rounded-t-3xl shadow-2xl"
-      >
-        {/* Size Selection */}
-        <div className="mb-4">
-          <label className="text-slate-700 text-sm mb-2 block">Size</label>
-          <div className="flex gap-2">
-            {sizes.map((size) => (
-              <motion.button
-                key={size}
-                onClick={() => setSelectedSize(size)}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className={`flex-1 py-2 rounded-xl transition-all shadow-sm ${selectedSize === size
-                    ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-md shadow-emerald-300/40'
-                    : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
-                  }`}
-              >
-                {size}
-              </motion.button>
-            ))}
-          </div>
-        </div>
+                    {/* Product Information */}
+                    <View style={{ paddingHorizontal: theme.spacing.lg, paddingTop: theme.spacing.lg, paddingBottom: 120 }}>
+                        {/* Brand */}
+                        <Text style={{
+                            color: theme.colors.primary,
+                            fontSize: 12,
+                            fontWeight: '600',
+                            letterSpacing: 1,
+                            marginBottom: theme.spacing.sm,
+                            textTransform: 'uppercase'
+                        }}>
+                            {product.brand || product.category}
+                        </Text>
 
-        {/* Color Selection */}
-        <div className="mb-6">
-          <label className="text-slate-700 text-sm mb-2 block">Color</label>
-          <div className="flex gap-3">
-            {colors.map((color) => (
-              <motion.button
-                key={color.name}
-                onClick={() => setSelectedColor(color.name)}
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-                className={`w-12 h-12 rounded-full border-2 transition-all shadow-md ${selectedColor === color.name
-                    ? 'border-slate-700 scale-110 shadow-lg'
-                    : 'border-slate-200'
-                  }`}
-                style={{ backgroundColor: color.value }}
-              />
-            ))}
-          </div>
-        </div>
+                        {/* Product Name */}
+                        <Text style={{
+                            color: theme.colors.text.primary,
+                            fontSize: 24,
+                            fontWeight: 'bold',
+                            marginBottom: theme.spacing.md,
+                            lineHeight: 32
+                        }}>
+                            {product.name}
+                        </Text>
 
-        {/* Action Buttons */}
-        <div className="flex gap-3">
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            className="flex-1 bg-gradient-to-r from-emerald-500 to-teal-500 text-white py-4 rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-emerald-300/40"
-          >
-            <ShoppingBag className="w-5 h-5" />
-            <span>Add to Cart</span>
-          </motion.button>
-        </div>
-      </motion.div>
-    </div>
-  );
+                        {/* Price */}
+                        {product.price > 0 ? (
+                            <Text style={{
+                                color: theme.colors.text.primary,
+                                fontSize: 28,
+                                fontWeight: 'bold',
+                                marginBottom: theme.spacing.sm
+                            }}>
+                                ${product.price.toFixed(2)}
+                            </Text>
+                        ) : (
+                            <Text style={{
+                                color: theme.colors.text.secondary,
+                                fontSize: 16,
+                                marginBottom: theme.spacing.sm
+                            }}>
+                                Price available on store
+                            </Text>
+                        )}
+
+                        {/* Rating */}
+                        {product.rating && (
+                            <View style={{
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                gap: 8,
+                                marginBottom: theme.spacing.lg
+                            }}>
+                                <View style={{ flexDirection: 'row', gap: 2 }}>
+                                    {renderStars(product.rating)}
+                                </View>
+                                <Text style={{ color: theme.colors.text.secondary, fontSize: 14 }}>
+                                    {product.rating.toFixed(1)} {product.reviewCount ? `(${product.reviewCount} Reviews)` : ''}
+                                </Text>
+                            </View>
+                        )}
+
+                        {/* About this item */}
+                        <View style={{ marginTop: theme.spacing.lg }}>
+                            <Text style={{
+                                color: theme.colors.text.primary,
+                                fontSize: 18,
+                                fontWeight: '600',
+                                marginBottom: theme.spacing.sm
+                            }}>
+                                About this item
+                            </Text>
+                            <Text style={{
+                                color: theme.colors.text.secondary,
+                                fontSize: 14,
+                                lineHeight: 22
+                            }}>
+                                {product.category === 'Visual Match'
+                                    ? 'This item was found through visual search. Tap "View on Store" below to see full details, size options, and additional product information.'
+                                    : 'View product details on the retailer\'s website for sizing, materials, and more information.'}
+                            </Text>
+                        </View>
+                    </View>
+                </ScrollView>
+
+                {/* Fixed Bottom Button */}
+                <View style={{
+                    position: 'absolute',
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    padding: theme.spacing.lg,
+                    backgroundColor: theme.colors.background,
+                    borderTopWidth: 1,
+                    borderTopColor: theme.colors.border
+                }}>
+                    <TouchableOpacity
+                        onPress={handleVisitStore}
+                        style={{
+                            backgroundColor: 'transparent',
+                            borderWidth: 2,
+                            borderColor: theme.colors.primary,
+                            paddingVertical: 16,
+                            borderRadius: theme.radius.button,
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                        }}
+                        activeOpacity={0.8}
+                    >
+                        <Text style={{
+                            color: theme.colors.primary,
+                            fontSize: 16,
+                            fontWeight: '600',
+                            letterSpacing: 0.5
+                        }}>
+                            View on Store
+                        </Text>
+                    </TouchableOpacity>
+                </View>
+            </View>
+        </Modal>
+    );
 }

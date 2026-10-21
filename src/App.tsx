@@ -4,10 +4,9 @@ import { MyCloset } from './components/MyCloset';
 import { StyleResultSheet } from './components/StyleResultSheet';
 import { VirtualTryOn } from './components/VirtualTryOn';
 import { ProductList } from './components/ProductList';
-import { Camera, Sparkles, ShoppingBag } from 'lucide-react';
 import { useAppStore } from './store/useAppStore';
-import { detectClothing } from './services/visionService';
-import { searchProducts } from './services/productService';
+import { compressImage } from './utils/imageUtils';
+import { scanImage } from './services/productService';
 import { getCurrentLocation } from './services/storeService';
 import type { Product } from './types';
 
@@ -17,11 +16,9 @@ export default function App() {
     setCurrentScreen,
     selectedProduct,
     setSelectedProduct,
-    setCurrentDetection,
     currentProducts,
     setCurrentProducts,
     setUserLocation,
-    isDetecting,
     setIsDetecting,
     isSearching,
     setIsSearching,
@@ -38,50 +35,70 @@ export default function App() {
   const handleImageCapture = async (imageData: string) => {
     try {
       setIsDetecting(true);
+      console.log('📱 [CLIENT] Image captured, size:', imageData.length);
 
-      // Detect clothing in image
-      const visionResult = await detectClothing(imageData);
-
-      if (!visionResult.success || visionResult.detections.length === 0) {
-        alert('No clothing detected. Please try another image.');
-        setIsDetecting(false);
-        return;
+      // If we received a URI (file:// or http) convert to base64 first
+      let payload = imageData;
+      if (!imageData.startsWith('data:')) {
+        try {
+          console.log('🔄 [CLIENT] Compressing image...');
+          payload = await compressImage(imageData);
+          console.log('✅ [CLIENT] Compressed to', payload.length, 'bytes');
+        } catch (err) {
+          console.warn('Image compression failed, proceeding with original uri:', err);
+          // proceed with original imageData; server will validate
+        }
       }
 
-      const detection = visionResult.detections[0];
-      setCurrentDetection(detection);
-
-      // Save to scan history
-      addScanHistory({
-        id: `scan_${Date.now()}`,
-        imageUrl: imageData,
-        detection,
-        timestamp: new Date().toISOString(),
-        productsFound: 0
+      // Run unified scan endpoint (Vision + product search)
+      setIsSearching(true);
+      console.log('🚀 [CLIENT] Calling /api/scan...');
+      const scanResp = await scanImage(payload);
+      console.log('✅ [CLIENT] Got scan response:', {
+        products: scanResp?.products?.length || 0,
+        message: scanResp?.message,
+        detections: scanResp?.detectedAttributes?.detections?.length || 0
       });
 
       setIsDetecting(false);
-      setIsSearching(true);
 
-      // Build search query from detection
-      const searchQuery = [
-        detection.attributes.colors?.[0],
-        detection.subcategory || detection.category,
-        detection.attributes.brand
-      ].filter(Boolean).join(' ');
+      if (scanResp?.message === 'No clear clothing detected' || !scanResp?.products || scanResp.products.length === 0) {
+        console.warn('❌ [CLIENT] No products returned:', scanResp?.message || 'Empty array');
+        if (scanResp?.message) {
+          if (typeof window !== 'undefined') alert(scanResp.message);
+        } else {
+          if (typeof window !== 'undefined') alert('No matches found. Try another angle.');
+        }
+        setIsSearching(false);
+        return;
+      }
 
-      // Search for products
-      const productResults = await searchProducts(searchQuery, {
-        categories: [detection.category]
-      });
+      const detection = scanResp.detectedAttributes?.detections?.[0];
+      console.log('📊 [CLIENT] Setting', scanResp.products.length, 'products to store');
+      setCurrentProducts(scanResp.products || []);
 
-      setCurrentProducts(productResults.products);
+      // Save scan history with products found
+      try {
+        addScanHistory({
+          id: `scan_${Date.now()}`,
+          imageUrl: payload,
+          detection,
+          timestamp: new Date().toISOString(),
+          productsFound: (scanResp.products || []).length
+        });
+      } catch (e) {
+        // ignore
+      }
+
       setIsSearching(false);
+      console.log('🎯 [CLIENT] Navigating to results screen');
       setCurrentScreen('results');
 
     } catch (error: any) {
-      console.error('Detection/Search error:', error);
-      alert(error.message || 'Failed to process image. Please try again.');
+      console.error('❌ [CLIENT] Detection/Search error:', error);
+      if (typeof window !== 'undefined') {
+        alert(error.message || 'Failed to process image. Please try again.');
+      }
       setIsDetecting(false);
       setIsSearching(false);
     }
@@ -112,7 +129,6 @@ export default function App() {
       {currentScreen === 'scanner' && (
         <Scanner
           onImageCapture={handleImageCapture}
-          isDetecting={isDetecting}
         />
       )}
 
@@ -163,7 +179,6 @@ export default function App() {
               className={`flex flex-col items-center gap-1 transition-all ${currentScreen === 'scanner' ? 'text-emerald-600 scale-110' : 'text-slate-400'
                 }`}
             >
-              <Camera className="w-6 h-6" />
               <span className="text-xs">Scanner</span>
             </button>
             <button
@@ -172,7 +187,6 @@ export default function App() {
               className={`flex flex-col items-center gap-1 transition-all ${currentScreen === 'results' ? 'text-emerald-600 scale-110' : 'text-slate-400'
                 } ${currentProducts.length === 0 ? 'opacity-50' : ''}`}
             >
-              <ShoppingBag className="w-6 h-6" />
               <span className="text-xs">Results</span>
             </button>
             <button
@@ -180,7 +194,6 @@ export default function App() {
               className={`flex flex-col items-center gap-1 transition-all ${currentScreen === 'closet' ? 'text-emerald-600 scale-110' : 'text-slate-400'
                 }`}
             >
-              <Sparkles className="w-6 h-6" />
               <span className="text-xs">My Closet</span>
             </button>
           </div>

@@ -1,7 +1,8 @@
-import { motion } from 'framer-motion';
-import { Heart, MapPin, ExternalLink, Star } from 'lucide-react';
-import { useAppStore } from '@store/useAppStore';
-import { formatPrice, calculateSavings } from '@utils/formatting';
+import { View, Text, TouchableOpacity, Image } from 'react-native';
+import { Heart, Star } from 'lucide-react-native';
+import { useAppStore } from '../store/useAppStore';
+import Animated, { FadeIn } from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
 import type { Product } from '../types';
 
 interface ProductCardProps {
@@ -13,8 +14,7 @@ export function ProductCard({ product, onClick }: ProductCardProps) {
     const { isSaved, addSavedItem, removeSavedItem } = useAppStore();
     const saved = isSaved(product.id);
 
-    const handleSaveToggle = (e: React.MouseEvent) => {
-        e.stopPropagation();
+    const handleSaveToggle = () => {
         if (saved) {
             removeSavedItem(product.id);
         } else {
@@ -22,100 +22,99 @@ export function ProductCard({ product, onClick }: ProductCardProps) {
         }
     };
 
-    const savings = product.originalPrice
-        ? calculateSavings(product.originalPrice, product.price)
-        : 0;
-
-    const nearestStore = product.storeAvailability?.[0];
-
     return (
-        <motion.div
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={onClick}
-            className="bg-white rounded-2xl overflow-hidden border border-slate-200 shadow-md hover:shadow-xl transition-all cursor-pointer"
+        <Animated.View
+            entering={FadeIn.duration(300)}
+            className="bg-white dark:bg-gray-900 rounded-2xl overflow-hidden shadow-lg mb-4 w-[48%]"
         >
-            {/* Image */}
-            <div className="relative aspect-square bg-slate-100">
-                <img
-                    src={product.imageUrl}
-                    alt={product.name}
-                    className="w-full h-full object-cover"
-                    loading="lazy"
-                />
-
-                {/* Badges */}
-                <div className="absolute top-3 left-3 flex flex-col gap-2">
-                    {savings > 0 && (
-                        <div className="bg-red-500 text-white px-2 py-1 rounded-full text-xs font-medium">
-                            {savings}% OFF
-                        </div>
-                    )}
-                    {!product.inStock && (
-                        <div className="bg-slate-900 text-white px-2 py-1 rounded-full text-xs font-medium">
-                            Out of Stock
-                        </div>
-                    )}
-                </div>
-
-                {/* Save Button */}
-                <button
-                    onClick={handleSaveToggle}
-                    className="absolute top-3 right-3 w-9 h-9 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center hover:scale-110 transition-transform"
-                >
-                    <Heart
-                        className={`w-5 h-5 transition-all ${saved ? 'fill-red-500 text-red-500' : 'text-slate-600'
-                            }`}
+            <TouchableOpacity onPress={onClick} activeOpacity={0.9}>
+                {/* Image Container */}
+                <View className="relative h-56 bg-gray-200">
+                    <Image
+                        source={{ uri: product.imageUrl }}
+                        className="w-full h-full"
+                        resizeMode="cover"
                     />
-                </button>
-            </div>
 
-            {/* Content */}
-            <div className="p-4">
-                {/* Brand & Rating */}
-                <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-emerald-600 font-medium">{product.brand}</span>
-                    {product.rating && (
-                        <div className="flex items-center gap-1">
-                            <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                            <span className="text-sm text-slate-600">{product.rating.toFixed(1)}</span>
-                        </div>
-                    )}
-                </div>
+                    {/* Floating Badges */}
+                    <View className="absolute top-3 left-3 flex-col gap-2">
+                        {product.originalPrice && product.originalPrice > product.price && (
+                            <View className="bg-mood-warning rounded-full px-2 py-1 shadow-sm">
+                                <Text className="text-white text-[10px] font-bold">SALE</Text>
+                            </View>
+                        )}
+                        {/* Mock Trending Badge for premium feel */}
+                        <View className="bg-brand-500 rounded-full px-2 py-1 shadow-sm">
+                            <Text className="text-white text-[10px] font-bold">TRENDING</Text>
+                        </View>
+                    </View>
 
-                {/* Name */}
-                <h3 className="text-slate-900 mb-2 line-clamp-2 min-h-[3rem]">
-                    {product.name}
-                </h3>
+                    {/* Save Button */}
+                    <TouchableOpacity
+                        onPress={(e) => {
+                            e.stopPropagation();
+                            handleSaveToggle();
+                        }}
+                        className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/90 items-center justify-center shadow-sm"
+                    >
+                        <Heart
+                            size={18}
+                            color={saved ? '#FF6B6B' : '#4B5563'}
+                            fill={saved ? '#FF6B6B' : 'transparent'}
+                        />
+                    </TouchableOpacity>
+                </View>
 
-                {/* Price */}
-                <div className="flex items-baseline gap-2 mb-3">
-                    <span className="text-slate-900 font-semibold">
-                        {formatPrice(product.price, product.currency)}
-                    </span>
-                    {product.originalPrice && product.originalPrice > product.price && (
-                        <span className="text-sm text-slate-400 line-through">
-                            {formatPrice(product.originalPrice, product.currency)}
-                        </span>
-                    )}
-                </div>
+                {/* Content */}
+                <View className="p-3">
+                    {/* Brand */}
+                    <Text className="text-gray-500 text-xs font-semibold uppercase tracking-wide">
+                        {product.brand}
+                    </Text>
 
-                {/* Retailer */}
-                <div className="flex items-center justify-between text-sm mb-3">
-                    <span className="text-slate-600">{product.retailer.name}</span>
-                    <ExternalLink className="w-4 h-4 text-slate-400" />
-                </div>
+                    {/* Name */}
+                    <Text numberOfLines={1} className="text-lg font-bold text-gray-900 dark:text-white mt-1">
+                        {product.name}
+                    </Text>
 
-                {/* Store Availability */}
-                {nearestStore && (
-                    <div className="flex items-center gap-2 px-3 py-2 bg-emerald-50 rounded-lg">
-                        <MapPin className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-                        <span className="text-sm text-emerald-700">
-                            {nearestStore.distance} {nearestStore.distanceUnit} away
-                        </span>
-                    </div>
-                )}
-            </div>
-        </motion.div>
+                    {/* Rating (Social Proof) */}
+                    <View className="flex-row items-center mt-1">
+                        <Star size={14} color="#FFB800" fill="#FFB800" />
+                        <Text className="ml-1 text-xs text-gray-600 font-medium">
+                            {product.rating ? product.rating.toFixed(1) : '4.8'} <Text className="text-gray-400">(1.2k)</Text>
+                        </Text>
+                    </View>
+
+                    {/* Price */}
+                    <View className="flex-row items-baseline mt-2 gap-2">
+                        <Text className="text-xl font-bold text-gray-900 dark:text-white">
+                            ${product.price}
+                        </Text>
+                        {product.originalPrice && (
+                            <Text className="text-xs line-through text-gray-400">
+                                ${product.originalPrice}
+                            </Text>
+                        )}
+                    </View>
+
+                    {/* Gradient Try-On Button */}
+                    <TouchableOpacity
+                        className="mt-3 rounded-xl overflow-hidden active:opacity-90"
+                    >
+                        <LinearGradient
+                            colors={['#00D9FF', '#00B8CC']}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 0 }}
+                            className="py-2.5 items-center"
+                        >
+                            <Text className="text-white font-bold text-sm tracking-wide">
+                                Virtual Try-On
+                            </Text>
+                        </LinearGradient>
+                    </TouchableOpacity>
+                </View>
+            </TouchableOpacity>
+        </Animated.View>
     );
 }
+
